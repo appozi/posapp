@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <meta name="description" content="Offline-First POS & Inventory Management" />
+  <title>NEON POS — Inventory & Sales</title>
+  <link rel="manifest" href="manifest.json" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cyber: {
+              black:'#0a0a0f', dark:'#0d0d1a', card:'#111128',
+              cyan:'#00f5ff', purple:'#bf00ff', pink:'#ff00aa',
+              yellow:'#f5ff00', green:'#00ff88', red:'#ff2244',
+              border:'#1e1e3a', muted:'#4a4a6a'
+            }
+          },
+          fontFamily: {
+            mono:['"Share Tech Mono"','monospace'],
+            display:['"Orbitron"','sans-serif'],
+            body:['"Exo 2"','sans-serif']
+          },
+          boxShadow: {
+            'cyan-glow':'0 0 20px rgba(0,245,255,0.4),0 0 40px rgba(0,245,255,0.1)',
+            'purple-glow':'0 0 20px rgba(191,0,255,0.4),0 0 40px rgba(191,0,255,0.1)',
+            'green-glow':'0 0 20px rgba(0,255,136,0.4)',
+            'red-glow':'0 0 20px rgba(255,34,68,0.4)',
+            'yellow-glow':'0 0 20px rgba(245,255,0,0.4)'
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="bg-cyber-black text-white font-body min-h-screen overflow-x-hidden">
+
+  <div class="grid-bg" aria-hidden="true"></div>
+  <div class="scanline" aria-hidden="true"></div>
+
+  <!-- HEADER -->
+  <header class="sticky top-0 z-50 glass-header border-b border-cyber-border px-4 py-3">
+    <div class="max-w-screen-xl mx-auto flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3 shrink-0">
+        <div class="logo-icon">⚡</div>
+        <h1 class="font-display text-lg font-black tracking-widest">
+          <span class="neon-cyan">NEON</span><span class="neon-purple">POS</span>
+        </h1>
+      </div>
+      <nav class="hidden md:flex gap-1 bg-cyber-dark rounded-lg p-1 border border-cyber-border">
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active">DASHBOARD</button>
+        <button onclick="switchTab('pos')" id="tab-pos" class="tab-btn">POS</button>
+        <button onclick="switchTab('inventory')" id="tab-inventory" class="tab-btn">INVENTORY</button>
+      </nav>
+      <div class="flex items-center gap-3 shrink-0">
+        <div id="sync-indicator" class="hidden items-center gap-1 text-xs font-mono text-cyber-yellow">
+          <div class="w-2 h-2 rounded-full bg-cyber-yellow animate-pulse"></div><span>SYNCING</span>
+        </div>
+        <div id="status-badge" class="status-online flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-mono">
+          <div id="status-dot" class="w-2 h-2 rounded-full bg-cyber-green"></div>
+          <span id="status-text">ONLINE</span>
+        </div>
+      </div>
+    </div>
+    <nav class="flex md:hidden gap-1 mt-3 bg-cyber-dark rounded-lg p-1 border border-cyber-border">
+      <button onclick="switchTab('dashboard')" id="tab-dashboard-m" class="tab-btn active flex-1">DASH</button>
+      <button onclick="switchTab('pos')" id="tab-pos-m" class="tab-btn flex-1">POS</button>
+      <button onclick="switchTab('inventory')" id="tab-inventory-m" class="tab-btn flex-1">STOCK</button>
+    </nav>
+  </header>
+
+  <main class="max-w-screen-xl mx-auto px-4 py-6">
+
+    <!-- DASHBOARD -->
+    <section id="tab-content-dashboard" class="tab-content">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="kpi-card kpi-cyan">
+          <div class="kpi-icon-wrap text-cyber-cyan">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div>
+            <p class="kpi-label">Total Revenue</p>
+            <p id="kpi-revenue" class="kpi-value neon-cyan">৳0.00</p>
+          </div>
+        </div>
+        <div class="kpi-card kpi-purple">
+          <div class="kpi-icon-wrap text-cyber-purple">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+          </div>
+          <div>
+            <p class="kpi-label">Total Profit</p>
+            <p id="kpi-profit" class="kpi-value neon-purple">৳0.00</p>
+          </div>
+        </div>
+        <div class="kpi-card kpi-green">
+          <div class="kpi-icon-wrap text-cyber-green">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          </div>
+          <div>
+            <p class="kpi-label">Total Sales</p>
+            <p id="kpi-sales" class="kpi-value neon-green">0</p>
+          </div>
+        </div>
+        <div class="kpi-card kpi-red">
+          <div class="kpi-icon-wrap text-cyber-red">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          </div>
+          <div>
+            <p class="kpi-label">Low Stock</p>
+            <p id="kpi-lowstock" class="kpi-value neon-red">0</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="glass-card">
+          <div class="section-header mb-4">
+            <div class="dot-red pulse-dot"></div>
+            <h2 class="section-title neon-red">LOW STOCK ALERTS</h2>
+          </div>
+          <div id="low-stock-list" class="space-y-2 max-h-64 overflow-y-auto custom-scroll">
+            <p class="empty-msg">All stock levels nominal</p>
+          </div>
+        </div>
+        <div class="glass-card">
+          <div class="section-header mb-4">
+            <div class="dot-cyan pulse-dot"></div>
+            <h2 class="section-title neon-cyan">RECENT TRANSACTIONS</h2>
+          </div>
+          <div id="recent-sales-list" class="space-y-2 max-h-64 overflow-y-auto custom-scroll">
+            <p class="empty-msg">No transactions yet</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="offline-queue-panel" class="hidden glass-card mt-6 border-cyber-yellow/30">
+        <div class="flex items-center justify-between mb-2">
+          <div class="section-header">
+            <div class="dot-yellow pulse-dot"></div>
+            <h2 class="section-title neon-yellow">OFFLINE QUEUE</h2>
+          </div>
+          <span id="offline-queue-count" class="text-xs font-mono bg-yellow-500/10 text-cyber-yellow px-2 py-1 rounded">0 pending</span>
+        </div>
+        <p class="text-cyber-muted text-xs font-mono">These sales were captured offline and will auto-sync when connection restores.</p>
+      </div>
+    </section>
+
+    <!-- POS -->
+    <section id="tab-content-pos" class="tab-content hidden">
+      <div class="grid lg:grid-cols-5 gap-6">
+        <div class="lg:col-span-3 space-y-4">
+          <div class="relative">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cyber-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input id="pos-search" type="text" placeholder="Search products..." oninput="filterPOSProducts()" class="cyber-input pl-10" />
+          </div>
+          <div id="pos-product-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto pr-1 custom-scroll"></div>
+        </div>
+
+        <div class="lg:col-span-2">
+          <div class="glass-card flex flex-col h-full">
+            <div class="section-header mb-4">
+              <div class="dot-purple pulse-dot"></div>
+              <h2 class="section-title neon-purple">SHOPPING CART</h2>
+              <span id="cart-count" class="ml-auto text-xs font-mono bg-purple-500/10 text-cyber-purple px-2 py-1 rounded">0 items</span>
+            </div>
+            <div id="cart-items" class="flex-1 space-y-2 overflow-y-auto max-h-56 pr-1 custom-scroll">
+              <p class="empty-msg py-8">Cart is empty</p>
+            </div>
+            <div class="mt-4 border-t border-cyber-border pt-4 space-y-2">
+              <div class="total-row"><span class="text-cyber-muted">Subtotal</span><span id="cart-subtotal">৳0.00</span></div>
+              <div class="total-row">
+                <span class="text-cyber-muted">Discount (%)</span>
+                <input id="discount-input" type="number" min="0" max="100" value="0" oninput="recalcCart()" class="w-16 bg-cyber-dark border border-cyber-border rounded px-2 py-1 text-right text-cyber-yellow text-xs font-mono focus:outline-none focus:border-cyber-yellow" />
+              </div>
+              <div class="total-row"><span class="text-cyber-muted">VAT (15%)</span><span id="cart-vat" class="neon-purple">৳0.00</span></div>
+              <div class="total-row border-t border-cyber-border pt-2">
+                <span class="font-bold text-white font-display text-sm tracking-wider">TOTAL</span>
+                <span id="cart-total" class="font-bold text-xl neon-cyan">৳0.00</span>
+              </div>
+            </div>
+            <input id="customer-name" type="text" placeholder="Customer name (optional)" class="cyber-input mt-3 text-sm" />
+            <button onclick="checkout()" id="checkout-btn" class="mt-3 w-full py-3 rounded-lg font-display text-sm font-bold tracking-widest checkout-btn">⚡ CHECKOUT</button>
+            <button onclick="clearCart()" class="mt-2 w-full py-2 rounded-lg font-mono text-xs text-cyber-muted border border-cyber-border hover:border-cyber-red hover:text-cyber-red transition-all">CLEAR CART</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INVENTORY -->
+    <section id="tab-content-inventory" class="tab-content hidden">
+      <div class="flex flex-col sm:flex-row gap-3 mb-6">
+        <div class="relative flex-1">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cyber-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <input id="inv-search" type="text" placeholder="Search inventory..." oninput="filterInventory()" class="cyber-input pl-10" />
+        </div>
+        <button onclick="openProductModal()" class="btn-primary px-6 py-3 rounded-lg font-display text-xs tracking-widest whitespace-nowrap">+ ADD PRODUCT</button>
+      </div>
+      <div class="glass-card overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm font-mono">
+            <thead>
+              <tr class="border-b border-cyber-border">
+                <th class="table-th">ID</th>
+                <th class="table-th text-left">PRODUCT</th>
+                <th class="table-th text-right">COST</th>
+                <th class="table-th text-right">PRICE</th>
+                <th class="table-th text-right">STOCK</th>
+                <th class="table-th text-center">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody id="inventory-table-body">
+              <tr><td colspan="6" class="text-center py-10 text-cyber-muted font-mono text-sm">No products found</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODALS -->
+  <div id="product-modal" class="modal-overlay hidden">
+    <div class="modal-box w-full max-w-md mx-4">
+      <div class="flex items-center justify-between mb-6">
+        <h2 id="modal-title" class="font-display text-base tracking-widest neon-cyan">ADD PRODUCT</h2>
+        <button onclick="closeProductModal()" class="text-cyber-muted hover:text-white transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="space-y-4">
+        <input type="hidden" id="product-firebase-key" />
+        <div class="form-group">
+          <label class="form-label">Product ID</label>
+          <input id="form-pid" type="text" placeholder="e.g. PRD-001" class="cyber-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Product Name</label>
+          <input id="form-name" type="text" placeholder="e.g. Wireless Headphones" class="cyber-input" />
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="form-group">
+            <label class="form-label">Purchase Price (৳)</label>
+            <input id="form-buy-price" type="number" min="0" step="0.01" placeholder="0.00" class="cyber-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Selling Price (৳)</label>
+            <input id="form-sell-price" type="number" min="0" step="0.01" placeholder="0.00" class="cyber-input" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Stock Quantity</label>
+          <input id="form-stock" type="number" min="0" placeholder="0" class="cyber-input" />
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button onclick="closeProductModal()" class="flex-1 py-3 rounded-lg border border-cyber-border text-cyber-muted hover:text-white hover:border-cyber-muted font-mono text-sm transition-all">CANCEL</button>
+          <button onclick="saveProduct()" class="flex-1 btn-primary py-3 rounded-lg font-display text-xs tracking-widest">SAVE PRODUCT</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="delete-modal" class="modal-overlay hidden">
+    <div class="modal-box w-full max-w-sm mx-4 text-center">
+      <div class="w-14 h-14 rounded-full border border-cyber-red flex items-center justify-center mx-auto mb-4" style="box-shadow:0 0 20px rgba(255,34,68,0.4)">
+        <svg class="w-7 h-7 text-cyber-red" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+      </div>
+      <h3 class="font-display text-sm tracking-widest neon-red mb-2">DELETE PRODUCT</h3>
+      <p class="text-cyber-muted text-sm font-mono mb-6">This action cannot be undone. Product will be permanently removed.</p>
+      <div class="flex gap-3">
+        <button onclick="closeDeleteModal()" class="flex-1 py-3 rounded-lg border border-cyber-border text-cyber-muted hover:text-white font-mono text-sm transition-all">CANCEL</button>
+        <button onclick="confirmDelete()" class="flex-1 py-3 rounded-lg border border-cyber-red text-cyber-red hover:bg-red-500/10 font-display text-xs tracking-widest transition-all" style="box-shadow:0 0 20px rgba(255,34,68,0.3)">DELETE</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden">
+    <span id="toast-icon">✓</span>
+    <span id="toast-message">Success</span>
+  </div>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>
