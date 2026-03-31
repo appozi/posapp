@@ -14,7 +14,18 @@ const firebaseConfig = {
   appId: "1:125295606758:web:2b9b74de93b2ec7dc5b427",
   measurementId: "G-NX7FF55FC2"
 };
+// Firebase Realtime Database অফলাইন পারসিস্টেন্স এবং সিঙ্কিং চালু করা
+import { ref, keepSynced } from "firebase/database";
 
+// ১. প্রোডাক্ট লিস্ট অফলাইনে সেভ রাখার জন্য
+const productsRef = ref(db, 'products');
+keepSynced(productsRef, true); 
+
+// ২. বিক্রয়ের হিসাব (Sales) অফলাইনে সেভ রাখার জন্য
+const salesRef = ref(db, 'sales');
+keepSynced(salesRef, true);
+
+// ৩. ইনভেন্টরি লগ বা অন্য কিছু থাকলে সেগুলোও একইভাবে যোগ করুন
 // ── Initialize Firebase ─────────────────────────────────────────
 const app = firebase.initializeApp(firebaseConfig);
 const db  = firebase.database();
